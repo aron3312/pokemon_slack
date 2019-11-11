@@ -36,3 +36,47 @@ def count_pokemon_ability(pokemon_dict, lv):
     pokemon_dict['tf'] = int(pokemon_dict['tf'] * (math.sqrt(lv) * 0.1 + 1))
     pokemon_dict['lv'] = lv
     return pokemon_dict
+
+
+def get_event(cur, user_id):
+    events = cur.execute(
+        "SELECT * FROM event WHERE owner_id == {}".format(user_id)).fetchone()
+    return events
+
+
+def write_event(con, cur, user_id, pokemon_dict, update):
+    if not update:
+        del pokemon_dict['id']
+        pokemon_dict['owner_id'] = user_id
+        pokemon_dict['use_pokemon_id'] = ''
+        cur.execute(
+            "INSERT or REPLACE into event ({}) VALUES ({})".format(
+                ','.join(pokemon_dict.keys()), ','.join(['?'] * len(pokemon_dict.keys()))),
+            tuple(pokemon_dict.values())
+        )
+        con.commit()
+    else:
+        cur.execute(
+            "INSERT or REPLACE into event ({}) VALUES ({})".format(
+                ','.join(pokemon_dict.keys()), ','.join(['?'] * len(pokemon_dict.keys()))),
+            tuple(pokemon_dict.values())
+        )
+        con.commit()
+
+
+def delete_event(con, cur, event_id):
+    cur.execute(
+        "DELETE  FROM event WHERE id == {}".format(event_id))
+    con.commit()
+
+
+def delete_pokemon(con,cur, pokemon_id):
+    cur.execute(
+        "DELETE  FROM own_pokemons WHERE id == {}".format(pokemon_id))
+    con.commit()
+
+
+def cause_damage(str, defense):
+    damage = str - defense
+    damage = damage if damage > 0 else 1
+    return damage
