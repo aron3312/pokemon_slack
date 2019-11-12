@@ -61,7 +61,7 @@ def check_my_pokemon():
                             , "mrkdwn": 'true'
                             })
         else:
-            return jsonify("請先建立玩家喔！")
+            return jsonify(no_account_notice())
 
 
 @app.route('/release', methods=['POST'])
@@ -82,7 +82,7 @@ def release_pokemon():
             else:
                 return jsonify("你沒有這個id的寶可夢喔！")
         else:
-            return jsonify("請先建立玩家喔！")
+            return jsonify(no_account_notice())
 
 
 @app.route('/catch_first_pokemon', methods=['POST'])
@@ -105,7 +105,7 @@ def catch_first_pokemon():
                     , 'attachments':[{'image_url': pokemon_dict['picture']}]
                     , "mrkdwn": 'true'})
         else:
-            return jsonify("請先建立玩家喔！")
+            return jsonify(no_account_notice())
 
 
 @app.route('/walk_around', methods=['POST'])
@@ -130,11 +130,7 @@ def walk_around():
                     random_enemy = get_range_level_pokemon(cur, max_hp)
                     pokemon_dict = dict(zip([c[0] for c in cur.description], random_enemy))
                     pokemon_dict = count_pokemon_ability(pokemon_dict, random.randint(from_num,end_num))
-                    response_dict = {'text': "你到處走動，遇到了這隻寶可夢！\n他的資訊是：{}　\n您要派出哪一隻神奇寶貝去對戰呢？ 請輸入神奇寶貝id。(可以使用/check_my_pokemon查詢)".format(
-                        '\n'.join([':'.join([str(k) for k in list(p)]) for p in pokemon_dict.items()]))
-                    , 'attachments':[{'image_url': pokemon_dict['picture']}]
-                    , "mrkdwn": 'true'
-                    }
+                    response_dict = walk_around_message(pokemon_dict)
                     write_event(con, cur, user_id, pokemon_dict, update=False)
                     return jsonify(response_dict)
                 else:
@@ -178,10 +174,10 @@ def walk_around():
                                 if get:
                                     catch_pokemon(con, cur, event_dict, user_id)
                                     delete_event(con, cur, event_id)
-                                    return jsonify({"text": "你投擲出了:pokeball: \n 恭喜您，您成功捕捉了！", "mrkdwn": 'true'})
+                                    return jsonify(catch_message(get))
                                 else:
                                     delete_event(con, cur, event_id)
-                                    return jsonify({"text": "你投擲出了:pokeball: \n 很可惜，他從寶貝球中逃跑了", "mrkdwn": 'true'})
+                                    return jsonify(catch_message(get))
                             else:
                                 return jsonify("您已擁有六隻寶可夢，無法捕捉")
                         elif request.form['text'] == 'a':
@@ -202,20 +198,19 @@ def walk_around():
                                                                                           my_damage, choosed_pokemon[3],event_dict['use_pokemon_hp'], event_dict['name'], event_dict['hp']), "mrkdwn": 'true'})
                             elif event_dict['hp'] <= 0 and event_dict['use_pokemon_hp'] <= 0:
                                 delete_event(con, cur, event_id)
-                                return jsonify("你的 *{}* 跟 *{}* 打成平手！！！".format(choosed_pokemon[3], event_dict['name']))
+                                return jsonify(battle_message("even", choosed_pokemon[3], event_dict['name']))
                             elif event_dict['hp'] <= 0:
                                 delete_event(con, cur, event_id)
                                 lv_up = get_exp(con, cur, choosed_pokemon_dict, 15, exp_record, exp_dict)
                                 if lv_up:
-                                    return jsonify("你的 *{}* 打贏了 *{}*！！！ 獲得*{}* 經驗值，恭喜你的*{}*升到 *{}* 等。 exp:{}/{}".format(choosed_pokemon[3], event_dict['name'], 15, choosed_pokemon[3], lv_up, exp_dict['exp'], (lv_up+1) * 30))
+                                    return jsonify(battle_exp_message(lv_up, choosed_pokemon[3], event_dict['name'], exp_dict))
                                 else:
                                     if not exp_dict:
                                         exp_dict = {'exp': (choosed_pokemon[10]) * 30 + 15}
-                                    return jsonify(
-                                        "你的 *{}* 打贏了 *{}*！！！ 獲得 *{}* 經驗值。 exp: {}/{}".format(choosed_pokemon[3], event_dict['name'], 15, exp_dict['exp'], (choosed_pokemon[10]+1) * 30))
+                                    return jsonify(battle_exp_message(lv_up, choosed_pokemon[3], event_dict['name'], exp_dict, choosed_pokemon[10]))
                             else:
                                 delete_event(con, cur, event_id)
-                                return jsonify("你的 *{}* 被 *{}* 打敗了，請多去訓練！！！".format(choosed_pokemon[3], event_dict['name']))
+                                return jsonify(battle_message("beat", choosed_pokemon[3], event_dict['name']))
                         elif request.form['text'] == 's':
                             event_id = event_dict['id']
                             strength = choosed_pokemon[8]
@@ -234,26 +229,25 @@ def walk_around():
                                                                                           event_dict['use_pokemon_hp'], event_dict['name'], event_dict['hp']), "mrkdwn": 'true'})
                             elif event_dict['hp'] <= 0 and event_dict['use_pokemon_hp'] <= 0:
                                 delete_event(con, cur, event_id)
-                                return jsonify("你的 *{}* 跟 *{}* 打成平手！！！".format(choosed_pokemon[3], event_dict['name']))
+                                return jsonify(battle_message("even", choosed_pokemon[3], event_dict['name']))
                             elif event_dict['hp'] <= 0:
                                 delete_event(con, cur, event_id)
                                 lv_up = get_exp(con, cur, choosed_pokemon_dict, 15, exp_record, exp_dict)
                                 if lv_up:
-                                    return jsonify("你的 *{}* 打贏了 *{}*！！！ 獲得 *{}* 經驗值，恭喜你的*{}*升到 *{}* 等。 exp:{}/{}".format(choosed_pokemon[3], event_dict['name'], 15, choosed_pokemon[3], lv_up, exp_dict['exp'], (lv_up+1) * 30))
+                                    return jsonify(battle_exp_message(lv_up, choosed_pokemon[3], event_dict['name'], exp_dict))
                                 else:
                                     if not exp_dict:
                                         exp_dict = {'exp': (choosed_pokemon[10]) * 30 + 15}
-                                    return jsonify(
-                                        "你的 *{}* 打贏了 *{}*！！！ 獲得 *{}* 經驗值。 exp: {}/{}".format(choosed_pokemon[3], event_dict['name'], 15, exp_dict['exp'], (choosed_pokemon[10]+1) * 30))
+                                    return jsonify(battle_exp_message(lv_up, choosed_pokemon[3], event_dict['name'], exp_dict, choosed_pokemon[10]))
                             else:
                                 delete_event(con, cur, event_id)
-                                return jsonify("你的 *{}* 被 *{}* 打敗了，請多去訓練！！！".format(choosed_pokemon[3], event_dict['name']))
+                                return jsonify(battle_message("beat", choosed_pokemon[3], event_dict['name']))
                         else:
-                            return jsonify("開發中")
+                            return jsonify("沒有這個指令喔！")
             else:
-                return jsonify('請至少擁有一隻寶可夢，再來進行喔！（/catch_first_pokemon）')
+                return jsonify(no_pokemon_notice())
         else:
-            return jsonify("請先建立玩家喔！")
+            return jsonify(no_account_notice())
 
 @app.route('/world_boss', methods=['POST'])
 def world_boss():
@@ -280,8 +274,6 @@ def pick():
         req = requests.post(url, data=json.dumps(message))
         print(req)
         return "success"
-
-
 
 
 if __name__ == '__main__':

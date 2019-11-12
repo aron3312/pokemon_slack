@@ -1,6 +1,7 @@
 import sqlite3 as sql
 import math
 
+
 def get_random_pokemon(cur):
     pokemon = cur.execute('SELECT * FROM pokemons ORDER BY RANDOM() LIMIT 1;').fetchone()
     return pokemon
@@ -126,3 +127,55 @@ def get_exp(con, cur, pokemon_info_dict, get_exp, exp_record, exp_dict):
             )
             con.commit()
             return int(exp_dict['exp'] / 30)
+
+
+# Message Area
+def walk_around_message(pokemon_dict):
+    message = "你到處走動，遇到了這隻寶可夢！\n他的資訊是：{}　\n您要派出哪一隻神奇寶貝去對戰呢？ 請輸入神奇寶貝id。(可以使用/check_my_pokemon查詢)".format(
+        '\n'.join([':'.join([str(k) for k in list(p)]) for p in pokemon_dict.items()])
+    )
+    response_dict = {'text': message, 'attachments':[{'image_url': pokemon_dict['picture']}], "mrkdwn": 'true'}
+    return response_dict
+
+
+def no_account_notice():
+    response_dict = {"text":"請先建立玩家喔！", "mrkdwn": 'true' }
+    return response_dict
+
+
+def no_pokemon_notice():
+    response_dict = {"text":"請至少擁有一隻寶可夢，再來進行喔！（/catch_first_pokemon）", "mrkdwn": 'true' }
+    return response_dict
+
+
+def battle_message(result_type, my_pokemon_name, enemy_name):
+    if result_type == 'even':
+        message = "你的 *{}* 跟 *{}* 打成平手！！！".format(my_pokemon_name, enemy_name)
+    elif result_type == 'beat':
+        message = "你的 *{}* 被 *{}* 打敗了，請多去訓練！！！".format(my_pokemon_name, enemy_name)
+    else:
+        message = "Error"
+    response_dict = {'text': message, "mrkdwn": 'true'}
+    return response_dict
+
+
+def battle_exp_message(lv_up, my_pokemon_name, enemy_name, exp_dict, lv=None):
+    if lv_up:
+        message = "你的 *{}* 打贏了 *{}*！！！ 獲得 *{}* 經驗值，恭喜你的*{}*升到 *{}* 等。 exp:{}/{}".format(
+            my_pokemon_name, enemy_name, 15, my_pokemon_name, lv_up, exp_dict['exp'], (lv_up+1) * 30
+        )
+    else:
+        message = "你的 *{}* 打贏了 *{}*！！！ 獲得 *{}* 經驗值。 exp: {}/{}".format(
+            my_pokemon_name, enemy_name, 15, exp_dict['exp'], (lv+1) * 30
+        )
+    response_dict = {'text': message, "mrkdwn": 'true'}
+    return response_dict
+
+
+def catch_message(get):
+    if get:
+        message = "你投擲出了:pokeball: \n 恭喜您，您成功捕捉了！"
+    else:
+        message = "你投擲出了:pokeball: \n 很可惜，他從寶貝球中逃跑了"
+    response_dict = {"text": message, "mrkdwn": 'true'}
+    return response_dict
