@@ -1,5 +1,4 @@
 from typing import Dict, Any, Union
-
 from flask import Flask
 from flask import request
 from flask import jsonify
@@ -8,6 +7,7 @@ import sqlite3 as sql
 import random
 import requests
 import json
+import config
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
@@ -101,9 +101,11 @@ def catch_first_pokemon():
                 pokemon_dict = dict(zip([c[0] for c in cur.description], pokemon))
                 rowDict = dict(zip([c[0] for c in cur.description], pokemon))
                 catch_pokemon(con, cur, rowDict, user_id)
-            return jsonify({'text':"你已經獲得你的第一隻寶可夢囉！\n他的資訊是：\n{}".format('　　'.join([':'.join([str(k) for k in list(p)]) for p in pokemon_dict.items()]))
-                    , 'attachments':[{'image_url': pokemon_dict['picture']}]
-                    , "mrkdwn": 'true'})
+            return jsonify({
+                'text':"你已經獲得你的第一隻寶可夢囉！\n他的資訊是：\n{}".format('　　'.join([':'.join([str(k) for k in list(p)]) for p in pokemon_dict.items()]))
+                , 'attachments':[{'image_url': pokemon_dict['picture']}]
+                , "mrkdwn": 'true'
+            })
         else:
             return jsonify(no_account_notice())
 
@@ -124,8 +126,8 @@ def walk_around():
                 if not now_event:
                     max_hp = sorted(own_pokemons, key=lambda x: x[4], reverse=True)[0][4]
                     max_lv = sorted(own_pokemons, key=lambda x: x[10], reverse=True)[0][10]
-                    from_num = max_lv - 5
-                    end_num = max_lv + 5
+                    from_num = max_lv - config.enemy_lv_range
+                    end_num = max_lv + config.enemy_lv_range
                     from_num = from_num if from_num > 0 else 1
                     random_enemy = get_range_level_pokemon(cur, max_hp)
                     pokemon_dict = dict(zip([c[0] for c in cur.description], random_enemy))
@@ -159,7 +161,7 @@ def walk_around():
                             delete_event(con, cur, event_dict['id'])
                             return jsonify("您已成功逃脫！")
                         elif request.form['text'] == 'c':
-                            if len(own_pokemons) < 6:
+                            if len(own_pokemons) < config.max_pokemons_num:
                                 last_hp = event_dict['hp']
                                 del event_dict['use_pokemon_id']
                                 del event_dict['use_pokemon_hp']
@@ -179,7 +181,7 @@ def walk_around():
                                     delete_event(con, cur, event_id)
                                     return jsonify(catch_message(get))
                             else:
-                                return jsonify("您已擁有六隻寶可夢，無法捕捉")
+                                return jsonify("您已擁有{}隻寶可夢，無法捕捉".format(config.max_pokemons_num))
                         elif request.form['text'] == 'a':
                             event_id = event_dict['id']
                             strength = choosed_pokemon[5]
@@ -201,12 +203,12 @@ def walk_around():
                                 return jsonify(battle_message("even", choosed_pokemon[3], event_dict['name']))
                             elif event_dict['hp'] <= 0:
                                 delete_event(con, cur, event_id)
-                                lv_up = get_exp(con, cur, choosed_pokemon_dict, 15, exp_record, exp_dict)
+                                lv_up = get_exp(con, cur, choosed_pokemon_dict, config.enemy_basic_exp, exp_record, exp_dict)
                                 if lv_up:
                                     return jsonify(battle_exp_message(lv_up, choosed_pokemon[3], event_dict['name'], exp_dict))
                                 else:
                                     if not exp_dict:
-                                        exp_dict = {'exp': (choosed_pokemon[10]) * 30 + 15}
+                                        exp_dict = {'exp': (choosed_pokemon[10]) * 30 + config.enemy_basic_exp}
                                     return jsonify(battle_exp_message(lv_up, choosed_pokemon[3], event_dict['name'], exp_dict, choosed_pokemon[10]))
                             else:
                                 delete_event(con, cur, event_id)
@@ -232,13 +234,16 @@ def walk_around():
                                 return jsonify(battle_message("even", choosed_pokemon[3], event_dict['name']))
                             elif event_dict['hp'] <= 0:
                                 delete_event(con, cur, event_id)
-                                lv_up = get_exp(con, cur, choosed_pokemon_dict, 15, exp_record, exp_dict)
+                                lv_up = get_exp(con, cur, choosed_pokemon_dict, config.enemy_basic_exp, exp_record,
+                                                exp_dict)
                                 if lv_up:
-                                    return jsonify(battle_exp_message(lv_up, choosed_pokemon[3], event_dict['name'], exp_dict))
+                                    return jsonify(battle_exp_message(lv_up, choosed_pokemon[3], event_dict['name'],
+                                                                      exp_dict))
                                 else:
                                     if not exp_dict:
-                                        exp_dict = {'exp': (choosed_pokemon[10]) * 30 + 15}
-                                    return jsonify(battle_exp_message(lv_up, choosed_pokemon[3], event_dict['name'], exp_dict, choosed_pokemon[10]))
+                                        exp_dict = {'exp': (choosed_pokemon[10]) * 30 + config.enemy_basic_exp}
+                                    return jsonify(battle_exp_message(lv_up, choosed_pokemon[3], event_dict['name'],
+                                                                      exp_dict, choosed_pokemon[10]))
                             else:
                                 delete_event(con, cur, event_id)
                                 return jsonify(battle_message("beat", choosed_pokemon[3], event_dict['name']))
@@ -249,18 +254,12 @@ def walk_around():
         else:
             return jsonify(no_account_notice())
 
+
 @app.route('/world_boss', methods=['POST'])
 def world_boss():
     if request.method == 'POST':
-        con = sql.connect('record.db')
-        cur = con.cursor()
-        url = "https://hooks.slack.com/services/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"
-        pokemon = get_random_pokemon(cur)
-        pokemon_dict = dict(zip([c[0] for c in cur.description], pokemon))
-        message = {"text":"{},你抽到的寶可夢資訊是：{}".format(request.form['user_name'], '　　'.join([':'.join([str(k) for k in list(p)]) for p in pokemon_dict.items()]))}
-        req = requests.post(url, data=json.dumps(message))
-        print(req)
         return "success"
+
 
 @app.route('/pick', methods=['POST'])
 def pick():
