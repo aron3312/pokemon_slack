@@ -31,12 +31,13 @@ def check_pokemon(cur, user_id):
 
 
 def count_pokemon_ability(pokemon_dict, lv):
-    pokemon_dict['hp'] = int(pokemon_dict['hp'] * (math.sqrt(lv)*0.15 + 1))
-    pokemon_dict['str'] = int(pokemon_dict['str'] * (math.sqrt(lv)*0.15 + 1))
-    pokemon_dict['def'] = int(pokemon_dict['def'] * (math.sqrt(lv)*0.15 + 1))
-    pokemon_dict['speed'] = int(pokemon_dict['speed'] * (math.sqrt(lv) * 0.15 + 1))
-    pokemon_dict['tg'] = int(pokemon_dict['tg'] * (math.sqrt(lv) * 0.15 + 1))
-    pokemon_dict['tf'] = int(pokemon_dict['tf'] * (math.sqrt(lv) * 0.15 + 1))
+    per = 0.12
+    pokemon_dict['hp'] = int(pokemon_dict['hp'] * (math.sqrt(lv) * per + 1))
+    pokemon_dict['str'] = int(pokemon_dict['str'] * (math.sqrt(lv) * per + 1))
+    pokemon_dict['def'] = int(pokemon_dict['def'] * (math.sqrt(lv) * per + 1))
+    pokemon_dict['speed'] = int(pokemon_dict['speed'] * (math.sqrt(lv) * per + 1))
+    pokemon_dict['tg'] = int(pokemon_dict['tg'] * (math.sqrt(lv) * per + 1))
+    pokemon_dict['tf'] = int(pokemon_dict['tf'] * (math.sqrt(lv) * per + 1))
     pokemon_dict['lv'] = lv
     return pokemon_dict
 
@@ -88,7 +89,7 @@ def cause_damage(strength, defense):
 def level_up_ablity(pokemon_dict, origin_lv, lv):
     all_abil = sum([pokemon_dict['hp'], pokemon_dict['str'], pokemon_dict['def'],
                     pokemon_dict['speed'], pokemon_dict['tg'], pokemon_dict['tf']])
-    high_balance = 2 if lv < 50 else (1/math.loglp(lv))
+    high_balance = 2.5 if lv < 50 else (1/math.log(lv))
     minus_lv = lv - origin_lv
     pokemon_dict['hp'] = pokemon_dict['hp'] + (int((pokemon_dict['hp']/all_abil) * 10 * high_balance) * minus_lv)
     pokemon_dict['str'] = pokemon_dict['str'] + (int((pokemon_dict['str']/all_abil) * 10 * high_balance) * minus_lv)
@@ -100,7 +101,7 @@ def level_up_ablity(pokemon_dict, origin_lv, lv):
 
 
 # def check_evolve(con, cur, pokemon_info_dict):
-#
+
 
 
 def get_exp(con, cur, pokemon_info_dict, get_exp, exp_record, exp_dict):
