@@ -1,2 +1,2 @@
-Flask==1.1.1
+fastapi== 0.104.0
 requests

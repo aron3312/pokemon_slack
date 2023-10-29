@@ -1,6 +1,11 @@
+import datetime
 import math
-import config
+from src import config
 
+
+def utcnow() -> datetime.datetime:
+    """Generates timezone-aware UTC datetime."""
+    return datetime.datetime.now(datetime.timezone.utc)
 
 def get_random_pokemon(cur):
     pokemon = cur.execute('SELECT * FROM pokemons ORDER BY RANDOM() LIMIT 1;').fetchone()
@@ -168,11 +173,11 @@ def battle_message(result_type, my_pokemon_name, enemy_name):
 def battle_exp_message(lv_up, my_pokemon_name, enemy_name, exp_dict, lv=None):
     if lv_up:
         message = "你的 *{}* 打贏了 *{}*！！！ 獲得 *{}* 經驗值，恭喜你的*{}*升到 *{}* 等。 exp:{}/{}".format(
-            my_pokemon_name, enemy_name, config.enemy_basic_exp, my_pokemon_name, lv_up, exp_dict['exp'], (lv_up+1) * 30
+            my_pokemon_name, enemy_name, config.enemy_basic_exp, my_pokemon_name, lv_up, exp_dict['exp'], (lv_up + 1) * 30
         )
     else:
         message = "你的 *{}* 打贏了 *{}*！！！ 獲得 *{}* 經驗值。 exp: {}/{}".format(
-            my_pokemon_name, enemy_name, config.enemy_basic_exp, exp_dict['exp'], (lv+1) * 30
+            my_pokemon_name, enemy_name, config.enemy_basic_exp, exp_dict['exp'], (lv + 1) * 30
         )
     response_dict = {'text': message, "mrkdwn": 'true'}
     return response_dict
